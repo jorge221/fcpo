@@ -4,6 +4,12 @@ from joblib import Parallel, delayed, cpu_count
 from scipy.stats import qmc
 from scipy.spatial.distance import pdist
 
+"""Feline-inspired constrained population optimizer.
+
+The core algorithm combines PSO-style velocity updates with behavior-state
+transitions and an eigenvector-aligned local model extracted from elite points.
+"""
+
 # -----------------------------------------------------------------------------
 # 1. Initialization Strategy (Latin Hypercube Sampling)
 # -----------------------------------------------------------------------------
@@ -101,6 +107,7 @@ def fcpo_optimize(
     init_positions=None, workers=1, verbose=False,
     dt_initial=None 
 ):
+    # Dedicated RNG keeps all stochastic behavior reproducible from `seed`.
     rng = np.random.default_rng(seed)
     S = dim
     
@@ -115,6 +122,7 @@ def fcpo_optimize(
     
     lb = np.broadcast_to(lower_bounds, (1, S))
     ub = np.broadcast_to(upper_bounds, (1, S))
+    # Keep bounds in shape (1, S) so they can broadcast against particle arrays.
 
     # --- Initialization ---
     if init_positions is not None:
@@ -134,6 +142,7 @@ def fcpo_optimize(
     # Parallel Evaluator
     if workers == -1: workers = cpu_count() - 1
     def evaluate_population(curr_x):
+        # Objective evaluations are independent, so they parallelize cleanly.
         return np.array(Parallel(n_jobs=workers)(delayed(loss_fn)(curr_x[i]) for i in range(len(curr_x))))
 
     # Initial Eval
@@ -162,6 +171,7 @@ def fcpo_optimize(
         # ---------------------------------------------------------------------
         # A. Linear Population Size Reduction (LPSR)
         # ---------------------------------------------------------------------
+        # Shrink the swarm over time so compute budget shifts toward refinement.
         plan_P = int(round(((P_min - initial_P) / max_iters) * it + initial_P))
         if P > plan_P:
             # Kill the worst particles
@@ -275,6 +285,7 @@ def fcpo_optimize(
         # ---------------------------------------------------------------------
         # D. Evaluation & Updates
         # ---------------------------------------------------------------------
+        # Evaluate all particles at their new positions before updating bests.
         losses = evaluate_population(x)
 
         improved = losses < pbest_loss
@@ -309,6 +320,7 @@ def fcpo_optimize(
             candidates = np.clip(candidates, lb[0], ub[0])
             
             for cand in candidates:
+                # Direct calls avoid joblib overhead for this tiny candidate set.
                 val = loss_fn(cand)
                 if val < gbest_loss:
                     gbest = cand

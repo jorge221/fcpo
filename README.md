@@ -9,7 +9,7 @@ It blends Particle Swarm Optimization (PSO) dynamics with:
 - adaptive population size reduction,
 - and a late-stage local search refinement.
 
-The main entrypoint is `fcpo_optimize` in `fcpo.py`.
+The main entrypoint is `fcpo_optimize` in `src/fcpo/optimizer.py` (exposed as `fcpo.fcpo_optimize`).
 
 ## Features
 
@@ -24,7 +24,7 @@ The main entrypoint is `fcpo_optimize` in `fcpo.py`.
 Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Quick Start
